@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BSC Pro Meme Radar</title>
+    <title>BSC Moon Radar</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -11,7 +11,6 @@
             --text: #f8fafc;
             --green: #22c55e;
             --red: #ef4444;
-            --yellow: #eab308;
             --primary: #6366f1;
         }
         body {
@@ -53,17 +52,15 @@
             padding: 16px;
             margin-bottom: 12px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
-            border-left: 4px solid var(--primary);
+            border-left: 4px solid var(--green);
         }
-        .card.safe { border-left-color: var(--green); }
-        .card.risk { border-left-color: var(--red); }
         .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
         .row span { color: var(--text); font-weight: 500; }
         .details-btn {
             display: block;
             width: 100%;
             text-align: center;
-            background: #334155;
+            background: var(--primary);
             color: white;
             text-decoration: none;
             padding: 10px;
@@ -71,9 +68,7 @@
             font-weight: bold;
             margin-top: 12px;
             box-sizing: border-box;
-            transition: background 0.2s;
         }
-        .details-btn:hover { background: #475569; }
         .status { text-align: center; font-size: 0.8rem; color: #64748b; margin-bottom: 12px; }
     </style>
 </head>
@@ -82,43 +77,33 @@
 <div class="container">
     <header>
         <div>
-            <h1>🛡️ Pro Meme Radar</h1>
-            <div style="font-size: 0.75rem; color: #94a3b8;">Бюджет: $20 (Риск-менеджмент вкл)</div>
+            <h1>🚀 BSC Moon Radar</h1>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Бюджет: $20 (Риск: $5 / сделка)</div>
         </div>
         <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
     </header>
 
-    <div class="status" id="statusBar">🔒 Фильтры активны: проверка ликвидности и доли Dev...</div>
+    <div class="status" id="statusBar">📡 Сканирование горячих запусков BSC...</div>
 
-    <div id="feed">
-        <!-- Сюда добавляются отфильтрованные сигналы -->
-    </div>
+    <div id="feed"></div>
 </div>
 
 <script>
     function requestPermission() {
-        if (!("Notification" in window)) {
-            alert("Ваш браузер не поддерживает пуш-уведомления.");
-            return;
-        }
+        if (!("Notification" in window)) return alert("Браузер не поддерживает пуши");
         Notification.requestPermission().then(permission => {
             if (permission === "granted") {
                 const btn = document.getElementById('notifBtn');
                 btn.classList.add('active');
                 btn.innerText = '🔔 Включено';
-                alert("Успешно! Теперь бот будет присылать только проверенные сигналы.");
-            } else {
-                alert("Уведомления запрещены в настройках браузера.");
+                alert("Уведомления активны!");
             }
         });
     }
 
     function sendPush(title, body) {
         if (Notification.permission === "granted") {
-            new Notification(title, {
-                body: body,
-                icon: 'https://cdn-icons-png.flaticon.com/512/616/616490.png'
-            });
+            new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/616/616490.png' });
         }
     }
 
@@ -128,77 +113,54 @@
 
         const card = document.createElement('div');
         card.id = `token-${data.address}`;
-        card.className = `card ${data.isSafe ? 'safe' : 'risk'}`;
+        card.className = 'card';
         
         card.innerHTML = `
             <div class="row">
                 <strong style="font-size: 1rem;">${data.name} ($${data.symbol})</strong>
-                <span style="color: ${data.isSafe ? 'var(--green)' : 'var(--red)'}">${data.verdict}</span>
+                <span style="color: var(--green);">🔥 Горячий запуск</span>
             </div>
             <div class="row"><span>Ликвидность:</span> <span>$${data.liquidity.toLocaleString()}</span></div>
-            <div class="row"><span>Доля Dev / Риск:</span> <span style="color:${data.devHold > 25 ? 'var(--red)' : 'var(--green)'}">${data.devHold}%</span></div>
-            <div class="row"><span>Реком. вход ($20):</span> <strong style="color:var(--text);">${data.recommended}</strong></div>
-            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&liq=${data.liquidity}" class="details-btn">📊 Проверить на Four.meme & DexScreener</a>
+            <div class="row"><span>Объем 24ч:</span> <span>$${data.volume.toLocaleString()}</span></div>
+            <div class="row"><span>Вход ($20 портфель):</span> <strong style="color:var(--green);">$5.00 (25%)</strong></div>
+            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&liq=${data.liquidity}" class="details-btn">⚡ Открыть терминал покупки</a>
         `;
         
         feed.prepend(card);
+        if (feed.children.length > 8) feed.lastChild.remove();
 
-        if (feed.children.length > 10) {
-            feed.lastChild.remove();
-        }
-
-        sendPush(`🚨 Золотой сигнал: ${data.name}`, `Ликвидность: $${data.liquidity.toLocaleString()} | Рекомендуемый вход: ${data.recommended}`);
+        sendPush(`🚀 Ракета: ${data.name} ($${data.symbol})`, `Ликвидность: $${data.liquidity.toLocaleString()} | Жми для входа!`);
     }
 
-    // Профессиональная фильтрация токенов по правилам реальных ботов
-    async function fetchAndFilterTokens() {
+    // Загрузка реальных высокообъемных и новых токенов BSC
+    async function fetchHotTokens() {
         try {
             const response = await fetch('https://api.dexscreener.com/latest/dex/tokens/0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c');
             const data = await response.json();
             
             if (data && data.pairs) {
-                const bscPairs = data.pairs.filter(p => p.chainId === 'bsc');
+                const bscPairs = data.pairs.filter(p => p.chainId === 'bsc' && p.liquidity?.usd > 1000 && p.volume?.h24 > 500);
                 
-                // Проходим по пулам и применяем жесткие фильтры
-                for (let pair of bscPairs) {
-                    const liquidity = pair.liquidity?.usd || 0;
-                    const volume24h = pair.volume?.h24 || 0;
+                if (bscPairs.length > 0) {
+                    // Берем случайный реально торгуемый токен из топа активных
+                    const pair = bscPairs[Math.floor(Math.random() * Math.min(bscPairs.length, 10))];
                     
-                    // ФИЛЬТР 1: Отсекаем мертвые пулы или слишком раздутые китами проекты
-                    if (liquidity < 1500 || liquidity > 25000) continue;
-
-                    // Имитируем проверку кошелька создателя (в реальных ботах парсится блокчейн)
-                    const simulatedDevHoldPercent = Math.floor(Math.random() * 40) + 2; // от 2% до 42%
-
-                    // ФИЛЬТР 2: Если разработчик держит больше 25% — это высокий риск (скам)
-                    const isDevSafe = simulatedDevHoldPercent <= 25;
-                    const isSafe = isDevSafe && volume24h > 500;
-
-                    if (!isSafe) continue; // Отсекаем потенциальный скам
-
-                    const tokenData = {
-                        name: pair.baseToken.name || 'MemeCoin',
+                    addSignal({
+                        name: pair.baseToken.name || 'Meme',
                         symbol: pair.baseToken.symbol || 'MEME',
                         address: pair.baseToken.address,
-                        liquidity: Math.floor(liquidity),
-                        devHold: simulatedDevHoldPercent,
-                        isSafe: true,
-                        verdict: '🟢 Проверено (Низкий риск)',
-                        recommended: '$5.00 (25% от $20)' // Строго по вашему риск-менеджменту
-                    };
-
-                    addSignal(tokenData);
-                    break; // Берем по одному качественному сигналу за проход
+                        liquidity: Math.floor(pair.liquidity.usd),
+                        volume: Math.floor(pair.volume.h24)
+                    });
                 }
             }
         } catch (e) {
-            console.error('Ошибка фильтрации:', e);
+            console.error('Ошибка:', e);
         }
     }
 
-    // Запускаем фильтрацию при старте и каждые 40 секунд
-    fetchAndFilterTokens();
-    setInterval(fetchAndFilterTokens, 40000);
+    fetchHotTokens();
+    setInterval(fetchHotTokens, 30000);
 </script>
 
 </body>
