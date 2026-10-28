@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC Meme Radar & Signals</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --green: #22c55e;
+            --red: #ef4444;
+            --primary: #6366f1;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { width: 100%; max-width: 480px; }
+        header {
+            background: var(--card);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+        }
+        h1 { font-size: 1.1rem; margin: 0; }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn.active { background: var(--green); }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            border-left: 4px solid var(--primary);
+        }
+        .card.safe { border-left-color: var(--green); }
+        .card.risk { border-left-color: var(--red); }
+        .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
+        .row span { color: var(--text); font-weight: 500; }
+        .details-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: #334155;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 12px;
+            box-sizing: border-box;
+            transition: background 0.2s;
+        }
+        .details-btn:hover { background: #475569; }
+        .status { text-align: center; font-size: 0.8rem; color: #64748b; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>🚀 Meme Radar BSC</h1>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Бюджет: $20</div>
+        </div>
+        <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
+    </header>
+
+    <div class="status" id="statusBar">📡 Ожидание новых пампов в сети...</div>
+
+    <div id="feed">
+        <!-- Сюда динамически добавляются карточки с прогнозами -->
+    </div>
+</div>
+
+<script>
+    // Проверка поддержки уведомлений
+    function requestPermission() {
+        if (!("Notification" in window)) {
+            alert("Ваш браузер не поддерживает пуш-уведомления.");
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                const btn = document.getElementById('notifBtn');
+                btn.classList.add('active');
+                btn.innerText = '🔔 Включено';
+                alert("Успешно! Теперь при появлении пампов телефон пришлет уведомление.");
+            } else {
+                alert("Уведомления запрещены в настройках браузера.");
+            }
+        });
+    }
+
+    // Отправка системного пуша
+    function sendPush(title, body) {
+        if (Notification.permission === "granted") {
+            new Notification(title, {
+                body: body,
+                icon: 'https://cdn-icons-png.flaticon.com/512/616/616490.png'
+            });
+        }
+    }
+
+    // Функция добавления прогноза на сайт и отправки пуша
+    function addSignal(data) {
+        const feed = document.getElementById('feed');
+        const card = document.createElement('div');
+        card.className = `card ${data.isSafe ? 'safe' : 'risk'}`;
+        
+        card.innerHTML = `
+            <div class="row">
+                <strong style="font-size: 1rem;">${data.name} ($${data.symbol})</strong>
+                <span style="color: ${data.isSafe ? 'var(--green)' : 'var(--red)'}">${data.verdict}</span>
+            </div>
+            <div class="row"><span>Ликвидность:</span> <span>$${data.liquidity}</span></div>
+            <div class="row"><span>Доля Dev:</span> <span>${data.devHold}%</span></div>
+            <div class="row"><span>Реком. вход ($20):</span> <strong style="color:var(--text);">${data.recommended}</strong></div>
+            <a href="signal.html?token=${data.address}&name=${data.name}&liq=${data.liquidity}" class="details-btn">📊 Посмотреть прогноз и ссылки</a>
+        `;
+        
+        feed.prepend(card);
+
+        // Ограничиваем ленту до 10 штук
+        if (feed.children.length > 10) {
+            feed.lastChild.remove();
+        }
+
+        // Шлем системный пуш на телефон
+        sendPush(`🚨 Памп: ${data.name} (${data.verdict})`, `Ликвидность: $${data.liquidity} | Вход: ${data.recommended}`);
+    }
+
+    // Симуляция появления новых токенов (для проверки работы сайта и пушей)
+    function simulateNewPump() {
+        const names = ['PepeBNB', 'BscMoon', 'FrogAI', 'SafeDoge', 'FastPump', 'TurboBsc'];
+        const name = names[Math.floor(Math.random() * names.length)];
+        const liquidity = Math.floor(Math.random() * 7000) + 1000;
+        const devHold = Math.floor(Math.random() * 35) + 5;
+        const isSafe = devHold < 28 && liquidity > 2500;
+        
+        const data = {
+            name: name,
+            symbol: name.toUpperCase(),
+            address: '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+            liquidity: liquidity,
+            devHold: devHold,
+            isSafe: isSafe,
+            verdict: isSafe ? '🟢 Низкий риск' : '🔴 Высокий риск',
+            recommended: isSafe ? '$5.00 (25%)' : '$0.00 (Пропуск)'
+        };
+
+        addSignal(data);
+    }
+
+    // Запускаем симуляцию раз в 20 секунд (для теста)
+    setInterval(simulateNewPump, 20000);
+    
+    // Сгенерируем первый сигнал сразу при открытии
+    setTimeout(simulateNewPump, 1000);
+</script>
+
+</body>
+</html>
