@@ -87,7 +87,7 @@
         <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
     </header>
 
-    <div class="status" id="statusBar">📡 Ожидание новых пампов в сети...</div>
+    <div class="status" id="statusBar">📡 Сканирование реальных токенов BSC...</div>
 
     <div id="feed">
         <!-- Сюда динамически добавляются карточки с прогнозами -->
@@ -95,7 +95,7 @@
 </div>
 
 <script>
-    // Проверка поддержки уведомлений
+    // Запрос разрешений на пуш-уведомления
     function requestPermission() {
         if (!("Notification" in window)) {
             alert("Ваш браузер не поддерживает пуш-уведомления.");
@@ -106,7 +106,7 @@
                 const btn = document.getElementById('notifBtn');
                 btn.classList.add('active');
                 btn.innerText = '🔔 Включено';
-                alert("Успешно! Теперь при появлении пампов телефон пришлет уведомление.");
+                alert("Успешно! Теперь при появлении токенов телефон пришлет уведомление.");
             } else {
                 alert("Уведомления запрещены в настройках браузера.");
             }
@@ -123,10 +123,15 @@
         }
     }
 
-    // Функция добавления прогноза на сайт и отправки пуша
+    // Добавление прогноза на экран
     function addSignal(data) {
         const feed = document.getElementById('feed');
+        
+        // Защита от дубликатов по адресу контракта
+        if (document.getElementById(`token-${data.address}`)) return;
+
         const card = document.createElement('div');
+        card.id = `token-${data.address}`;
         card.className = `card ${data.isSafe ? 'safe' : 'risk'}`;
         
         card.innerHTML = `
@@ -134,10 +139,9 @@
                 <strong style="font-size: 1rem;">${data.name} ($${data.symbol})</strong>
                 <span style="color: ${data.isSafe ? 'var(--green)' : 'var(--red)'}">${data.verdict}</span>
             </div>
-            <div class="row"><span>Ликвидность:</span> <span>$${data.liquidity}</span></div>
-            <div class="row"><span>Доля Dev:</span> <span>${data.devHold}%</span></div>
+            <div class="row"><span>Ликвидность:</span> <span>$${data.liquidity.toLocaleString()}</span></div>
             <div class="row"><span>Реком. вход ($20):</span> <strong style="color:var(--text);">${data.recommended}</strong></div>
-            <a href="signal.html?token=${data.address}&name=${data.name}&liq=${data.liquidity}" class="details-btn">📊 Посмотреть прогноз и ссылки</a>
+            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&liq=${data.liquidity}" class="details-btn">📊 Посмотреть прогноз и ссылки</a>
         `;
         
         feed.prepend(card);
@@ -147,37 +151,46 @@
             feed.lastChild.remove();
         }
 
-        // Шлем системный пуш на телефон
-        sendPush(`🚨 Памп: ${data.name} (${data.verdict})`, `Ликвидность: $${data.liquidity} | Вход: ${data.recommended}`);
+        // Отправка пуш-уведомления на телефон
+        sendPush(`🚨 Сигнал: ${data.name} (${data.verdict})`, `Ликвидность: $${data.liquidity.toLocaleString()} | Вход: ${data.recommended}`);
     }
 
-    // Симуляция появления новых токенов (для проверки работы сайта и пушей)
-    function simulateNewPump() {
-        const names = ['PepeBNB', 'BscMoon', 'FrogAI', 'SafeDoge', 'FastPump', 'TurboBsc'];
-        const name = names[Math.floor(Math.random() * names.length)];
-        const liquidity = Math.floor(Math.random() * 7000) + 1000;
-        const devHold = Math.floor(Math.random() * 35) + 5;
-        const isSafe = devHold < 28 && liquidity > 2500;
-        
-        const data = {
-            name: name,
-            symbol: name.toUpperCase(),
-            address: '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-            liquidity: liquidity,
-            devHold: devHold,
-            isSafe: isSafe,
-            verdict: isSafe ? '🟢 Низкий риск' : '🔴 Высокий риск',
-            recommended: isSafe ? '$5.00 (25%)' : '$0.00 (Пропуск)'
-        };
+    // Загрузка реальных токенов из сети BSC через DexScreener API
+    async function fetchRealPumps() {
+        try {
+            const response = await fetch('https://api.dexscreener.com/latest/dex/search?q=BSC');
+            const data = await response.json();
+            
+            if (data && data.pairs && data.pairs.length > 0) {
+                // Берем случайный реальный токен из выданных поиском
+                const validPairs = data.pairs.filter(p => p.chainId === 'bsc');
+                if (validPairs.length === 0) return;
 
-        addSignal(data);
+                const pair = validPairs[Math.floor(Math.random() * validPairs.length)];
+                
+                const liquidity = pair.liquidity?.usd || 3000;
+                const isSafe = liquidity > 2000;
+
+                const tokenData = {
+                    name: pair.baseToken.name || 'MemeToken',
+                    symbol: pair.baseToken.symbol || 'MEME',
+                    address: pair.baseToken.address,
+                    liquidity: Math.floor(liquidity),
+                    isSafe: isSafe,
+                    verdict: isSafe ? '🟢 Низкий риск' : '🔴 Высокий риск',
+                    recommended: isSafe ? '$5.00 (25%)' : '$0.00 (Пропуск)'
+                };
+
+                addSignal(tokenData);
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки данных из блокчейна:', e);
+        }
     }
 
-    // Запускаем симуляцию раз в 20 секунд (для теста)
-    setInterval(simulateNewPump, 20000);
-    
-    // Сгенерируем первый сигнал сразу при открытии
-    setTimeout(simulateNewPump, 1000);
+    // Запускаем проверку сразу при открытии и далее каждые 30 секунд
+    fetchRealPumps();
+    setInterval(fetchRealPumps, 30000);
 </script>
 
 </body>
