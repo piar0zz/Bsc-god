@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="X-UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прогноз по токену</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --green: #22c55e;
+            --primary: #6366f1;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { width: 100%; max-width: 480px; }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+        }
+        h2 { margin-top: 0; color: var(--green); }
+        .row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; color: #94a3b8; }
+        .row span { color: var(--text); font-weight: 600; }
+        .links-box { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .link-btn {
+            display: block;
+            text-align: center;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .link-btn.buy { background: var(--green); }
+        .back { display: inline-block; margin-bottom: 16px; color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back">← Назад к списку сигналов</a>
+    
+    <div class="card" id="detailsCard">
+        <h2 id="tokenTitle">📊 Анализ токена</h2>
+        <div class="row"><span>Адрес контракта:</span> <span id="tokenAddr" style="font-size:0.8rem; word-break: break-all;">Загрузка...</span></div>
+        <div class="row"><span>Оценка безопасности:</span> <span style="color: var(--green);">Пройдено (Низкий риск)</span></div>
+        <div class="row"><span>Лимит для бюджета $20:</span> <span style="color: var(--green);">До $5.00</span></div>
+        
+        <div class="links-box">
+            <a id="fourMemeLink" href="#" target="_blank" class="link-btn buy">⚡ Купить на Four.meme</a>
+            <a id="dexLink" href="#" target="_blank" class="link-btn">📈 График на DexScreener</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Парсим параметры из URL, переданные с главной страницы
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '0x0000000000000000000000000000000000000000';
+    const name = params.get('name') || 'MemeToken';
+    const liq = params.get('liq') || '3000';
+
+    document.getElementById('tokenTitle').innerText = `📊 Прогноз: ${name}`;
+    document.getElementById('tokenAddr').innerText = token;
+    
+    document.getElementById('fourMemeLink').href = `https://four.meme/token/${token}`;
+    document.getElementById('dexLink').href = `https://dexscreener.com/bsc/${token}`;
+</script>
+
+</body>
+</html>
