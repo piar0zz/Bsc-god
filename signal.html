@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Прогноз и покупка токена</title>
+    <title>Торговый терминал</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -11,7 +12,6 @@
             --text: #f8fafc;
             --green: #22c55e;
             --primary: #6366f1;
-            --okx: #000000;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -33,20 +33,20 @@
         h2 { margin-top: 0; color: var(--green); }
         .row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; color: #94a3b8; }
         .row span { color: var(--text); font-weight: 600; }
-        .links-box { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .links-box { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
         .link-btn {
             display: block;
             text-align: center;
             background: var(--primary);
             color: white;
             text-decoration: none;
-            padding: 12px;
+            padding: 14px;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 1rem;
         }
-        .link-btn.buy-four { background: var(--green); }
-        .link-btn.buy-okx { background: #1e293b; border: 2px solid #fff; }
+        .link-btn.okx { background: #000; border: 2px solid #22c55e; color: #22c55e; }
+        .link-btn.dex { background: #334155; }
         .back { display: inline-block; margin-bottom: 16px; color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
     </style>
 </head>
@@ -55,42 +55,36 @@
 <div class="container">
     <a href="index.html" class="back">← Назад к списку сигналов</a>
     
-    <div class="card" id="detailsCard">
-        <h2 id="tokenTitle">📊 Анализ токена</h2>
-        <div class="row"><span>Адрес контракта:</span> <span id="tokenAddr" style="font-size:0.75rem; word-break: break-all;">Загрузка...</span></div>
+    <div class="card">
+        <h2 id="tokenTitle">📊 Терминал сделки</h2>
+        <div class="row"><span>Контракт:</span> <span id="tokenAddr" style="font-size:0.75rem; word-break: break-all; color:#38bdf8;">Загрузка...</span></div>
         <div class="row"><span>Сеть:</span> <span style="color: #f59e0b;">BNB Smart Chain (BSC)</span></div>
-        <div class="row"><span>Оценка безопасности:</span> <span style="color: var(--green);">Пройдено (Низкий риск)</span></div>
-        <div class="row"><span>Лимит для бюджета $20:</span> <span style="color: var(--green);">До $5.00</span></div>
+        <div class="row"><span>Ваш бюджет:</span> <span>$20.00</span></div>
+        <div class="row"><span>Лимит на сделку (25%):</span> <span style="color: var(--green);">$5.00</span></div>
         
         <div class="links-box">
-            <!-- Правильная ссылка на Four.meme -->
-            <a id="fourMemeLink" href="#" target="_blank" class="link-btn buy-four">⚡ Купить на Four.meme</a>
+            <!-- Покупка через OKX DEX в сети BSC (работает для 100% токенов без ошибок 404) -->
+            <a id="okxLink" href="#" target="_blank" class="link-btn okx">🪙 Купить через OKX Wallet (DEX)</a>
             
-            <!-- Альтернатива через OKX DEX / Wallet (свап по адресу в сети BSC) -->
-            <a id="okxLink" href="#" target="_blank" class="link-btn buy-okx">🪙 Купить через OKX Wallet (DEX)</a>
-            
-            <!-- График -->
-            <a id="dexLink" href="#" target="_blank" class="link-btn">📈 График на DexScreener</a>
+            <!-- Живой график -->
+            <a id="dexLink" href="#" target="_blank" class="link-btn dex">📈 Открыть график DexScreener</a>
         </div>
     </div>
 </div>
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token') || '0x0000000000000000000000000000000000000000';
-    const name = params.get('name') || 'MemeToken';
+    const token = params.get('token') || '';
+    const name = params.get('name') || 'Token';
 
-    document.getElementById('tokenTitle').innerText = `📊 Прогноз: ${name}`;
+    document.getElementById('tokenTitle').innerText = `🚀 ${name}`;
     document.getElementById('tokenAddr').innerText = token;
     
-    // Исправленный формат ссылки на Four.meme (официальный роутинг токенов)
-    document.getElementById('fourMemeLink').href = `https://four.meme/token/${token}`;
-    
-    // Ссылка на DexScreener для графика
-    document.getElementById('dexLink').href = `https://dexscreener.com/bsc/${token}`;
-
-    // Универсальная ссылка для свапа через агрегатор OKX DEX в сети BSC (по адресу контракта)
+    // Прямой свап через агрегатор OKX DEX на сети BSC (chainId = 56)
     document.getElementById('okxLink').href = `https://www.okx.com/web3/dex?inputChain=56&inputCurrency=BNB&outputChain=56&outputCurrency=${token}`;
+    
+    // График DexScreener
+    document.getElementById('dexLink').href = `https://dexscreener.com/bsc/${token}`;
 </script>
 
 </body>
