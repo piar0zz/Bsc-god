@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Pump.fun & BSC Sniper</title>
+    <title>Elite Pump Sniper (Filtered)</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -11,8 +11,7 @@
             --text: #f8fafc;
             --green: #22c55e;
             --red: #ef4444;
-            --primary: #6366f1;
-            --pump: #10b981;
+            --primary: #10b981;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -53,7 +52,7 @@
             padding: 16px;
             margin-bottom: 12px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
-            border-left: 4px solid var(--pump);
+            border-left: 4px solid var(--primary);
         }
         .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
         .row span { color: var(--text); font-weight: 500; }
@@ -61,7 +60,7 @@
             display: block;
             width: 100%;
             text-align: center;
-            background: var(--pump);
+            background: var(--primary);
             color: white;
             text-decoration: none;
             padding: 12px;
@@ -72,6 +71,7 @@
         }
         .status { text-align: center; font-size: 0.8rem; color: #10b981; margin-bottom: 12px; font-weight: bold; }
         .time-badge { font-size: 0.75rem; background: #334155; padding: 2px 6px; border-radius: 4px; color: #cbd5e1; }
+        .socials { font-size: 0.8rem; color: #38bdf8; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -79,18 +79,20 @@
 <div class="container">
     <header>
         <div>
-            <h1>⚡ Realtime Pump Sniper</h1>
-            <div style="font-size: 0.75rem; color: #94a3b8;">Pump.fun (Задержка ~0 сек)</div>
+            <h1>🛡️ Elite Pump Sniper</h1>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Фильтр мусора: ВКЛ</div>
         </div>
         <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
     </header>
 
-    <div class="status" id="statusBar">🟢 WebSocket подключен к Pump.fun Stream...</div>
+    <div class="status" id="statusBar">🟢 Сканирование с жестким отбором...</div>
 
     <div id="feed"></div>
 </div>
 
 <script>
+    let ws;
+
     function requestPermission() {
         if (!("Notification" in window)) return alert("Браузер не поддерживает пуши");
         Notification.requestPermission().then(permission => {
@@ -111,11 +113,19 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         loadSignalsFromStorage();
-        connectPumpPortal();
+        connectWebSocket();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                connectWebSocket();
+            }
+        }
     });
 
     function getSavedSignals() {
-        const saved = localStorage.getItem('moon_signals');
+        const saved = localStorage.getItem('elite_moon_signals');
         return saved ? JSON.parse(saved) : [];
     }
 
@@ -123,8 +133,8 @@
         let signals = getSavedSignals();
         if (!signals.some(s => s.address === data.address)) {
             signals.unshift(data);
-            if (signals.length > 20) signals.pop();
-            localStorage.setItem('moon_signals', JSON.stringify(signals));
+            if (signals.length.length > 15) signals.pop();
+            localStorage.setItem('elite_moon_signals', JSON.stringify(signals));
         }
     }
 
@@ -143,31 +153,36 @@
         card.id = `token-${data.address}`;
         card.className = 'card';
         
+        let socialHtml = '';
+        if (data.twitter || data.telegram) {
+            socialHtml = `<div class="socials">🔗 ${data.twitter ? 'Twitter ' : ''}${data.telegram ? 'Telegram' : ''}</div>`;
+        }
+
         card.innerHTML = `
             <div class="row">
                 <strong style="font-size: 1rem;">${data.name} ($${data.symbol})</strong>
                 <span class="time-badge">${data.time}</span>
             </div>
-            <div class="row"><span>Источник:</span> <span style="color: #10b981;">⚡ Pump.fun (Realtime)</span></div>
-            <div class="row"><span>Старт. ликвидность:</span> <span style="color:#38bdf8;">~$${data.liquidity}</span></div>
-            <div class="row"><span>Лимит ($20 депозит):</span> <strong style="color:var(--green);">$5.00 (25%)</strong></div>
-            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&chain=solana" class="details-btn">⚡ Влететь в сделку</a>
+            <div class="row"><span>Ликвидность кривой:</span> <span style="color:#38bdf8;">~${data.solAmount} SOL</span></div>
+            ${socialHtml}
+            <div class="row"><span>Липкий вход ($20):</span> <strong style="color:var(--green);">$5.00 (25%)</strong></div>
+            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&chain=solana" class="details-btn">⚡ Открыть терминал и график</a>
         `;
         
         feed.prepend(card);
 
         if (isNew) {
-            sendPush(`⚡ МГНОВЕННЫЙ ЗАПУСК: ${data.name}`, `Pump.fun | Время: ${data.time} | Нажми для входа!`);
+            sendPush(`💎 ЭЛИТНЫЙ ГЕМ: ${data.name} ($${data.symbol})`, `Ликвидность: ~${data.solAmount} SOL | Жми для входа!`);
         }
     }
 
-    // Подключение к прямому WebSocket PumpPortal (без задержек DexScreener)
-    function connectPumpPortal() {
-        const ws = new WebSocket('wss://pumpportal.fun/api/data');
+    function connectWebSocket() {
+        if (ws) ws.close();
+
+        ws = new WebSocket('wss://pumpportal.fun/api/data');
 
         ws.onopen = () => {
-            console.log('Подключено к PumpPortal WebSocket');
-            // Подписываемся на новые создаваемые токены на Pump.fun
+            document.getElementById('statusBar').innerText = '🟢 Стрим активен (Фильтрация шлака)...';
             ws.send(JSON.stringify({ method: "subscribeNewToken" }));
         };
 
@@ -175,31 +190,51 @@
             try {
                 const data = JSON.parse(event.data);
                 
-                // Проверяем, что это новый деплой токена
                 if (data && data.mint) {
-                    const now = new Date();
-                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const solInCurve = data.vSolInBondingCurve || 0;
+                    const name = data.name || '';
+                    const symbol = data.symbol || '';
+                    const twitter = data.twitter;
+                    const telegram = data.telegram;
 
-                    const tokenData = {
-                        name: data.name || 'PumpToken',
-                        symbol: data.symbol || 'PUMP',
-                        address: data.mint, // Мгновенный адрес Solana
-                        liquidity: Math.floor(data.vSolInBondingCurve * 150) || 3000, // Примерная оценка в USD
-                        chain: 'solana',
-                        time: timeString
-                    };
+                    // ЖЕСТКИЕ КРИТЕРИИ ОТБОРА (Убийцы мусора):
+                    
+                    // 1. Ликвидность кривой должна быть в здоровом диапазоне (от 1 до 25 SOL), 
+                    // чтобы исключить пустые тесты и уже пропампепленные монеты.
+                    const isHealthyLiq = solInCurve >= 1.0 && solInCurve <= 25.0;
 
-                    saveSignalToStorage(tokenData);
-                    renderCard(tokenData, true);
+                    // 2. Защита от безымянного мусора (у монеты должно быть нормальное имя и тикер)
+                    const hasValidName = name.length > 1 && symbol.length > 1 && !name.toLowerCase().includes('test');
+
+                    // 3. Дополнительный фильтр качества: приветствуем наличие соцсетей (но не отсекаем наглухо, если их нет, но ликвидность хорошая)
+                    // Для теста сделаем так: если ликвидность отличная, пропускаем. Если есть соцсети — бонус к приоритету.
+                    
+                    if (isHealthyLiq && hasValidName) {
+                        const now = new Date();
+                        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                        const tokenData = {
+                            name: name,
+                            symbol: symbol,
+                            address: data.mint,
+                            solAmount: solInCurve.toFixed(2),
+                            twitter: twitter,
+                            telegram: telegram,
+                            time: timeString
+                        };
+
+                        saveSignalToStorage(tokenData);
+                        renderCard(tokenData, true);
+                    }
                 }
             } catch (e) {
-                console.error('Ошибка обработки сообщения WebSocket:', e);
+                console.error('Ошибка парсинга:', e);
             }
         };
 
         ws.onclose = () => {
-            document.getElementById('statusBar').innerText = '🔴 Переподключение к стриму...';
-            setTimeout(connectPumpPortal, 3000); // Автопереподключение при обрыве
+            document.getElementById('statusBar').innerText = '🔴 Переподключение...';
+            setTimeout(connectWebSocket, 3000);
         };
     }
 </script>
