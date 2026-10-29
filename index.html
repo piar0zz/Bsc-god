@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elite Pump Sniper (Filtered)</title>
+    <title>Elite Pump Sniper (Top-First)</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -80,12 +81,12 @@
     <header>
         <div>
             <h1>🛡️ Elite Pump Sniper</h1>
-            <div style="font-size: 0.75rem; color: #94a3b8;">Фильтр мусора: ВКЛ</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Новые сверху ⚡</div>
         </div>
         <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
     </header>
 
-    <div class="status" id="statusBar">🟢 Сканирование с жестким отбором...</div>
+    <div class="status" id="statusBar">🟢 Стрим активен. Ждем новые ракеты...</div>
 
     <div id="feed"></div>
 </div>
@@ -125,16 +126,17 @@
     });
 
     function getSavedSignals() {
-        const saved = localStorage.getItem('elite_moon_signals');
+        const saved = localStorage.getItem('elite_moon_signals_top');
         return saved ? JSON.parse(saved) : [];
     }
 
     function saveSignalToStorage(data) {
         let signals = getSavedSignals();
         if (!signals.some(s => s.address === data.address)) {
+            // Добавляем свежий сигнал в САМОЕ НАЧАЛО массива
             signals.unshift(data);
-            if (signals.length.length > 15) signals.pop();
-            localStorage.setItem('elite_moon_signals', JSON.stringify(signals));
+            if (signals.length > 15) signals.pop(); // Ограничение на 15 штук
+            localStorage.setItem('elite_moon_signals_top', JSON.stringify(signals));
         }
     }
 
@@ -142,6 +144,7 @@
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
         const signals = getSavedSignals();
+        // Рендерим по порядку из массива (самые новые уже в начале)
         signals.forEach(data => renderCard(data, false));
     }
 
@@ -169,10 +172,11 @@
             <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&chain=solana" class="details-btn">⚡ Открыть терминал и график</a>
         `;
         
+        // prepend гарантирует, что элемент встает В САМОЕ НАЧАЛО списка (выше всех старых)
         feed.prepend(card);
 
         if (isNew) {
-            sendPush(`💎 ЭЛИТНЫЙ ГЕМ: ${data.name} ($${data.symbol})`, `Ликвидность: ~${data.solAmount} SOL | Жми для входа!`);
+            sendPush(`💎 НОВАЯ РАКЕТА: ${data.name} ($${data.symbol})`, `Ликвидность: ~${data.solAmount} SOL | Жми для входа!`);
         }
     }
 
@@ -182,7 +186,7 @@
         ws = new WebSocket('wss://pumpportal.fun/api/data');
 
         ws.onopen = () => {
-            document.getElementById('statusBar').innerText = '🟢 Стрим активен (Фильтрация шлака)...';
+            document.getElementById('statusBar').innerText = '🟢 Стрим активен. Новые монеты летят наверх!';
             ws.send(JSON.stringify({ method: "subscribeNewToken" }));
         };
 
@@ -197,17 +201,9 @@
                     const twitter = data.twitter;
                     const telegram = data.telegram;
 
-                    // ЖЕСТКИЕ КРИТЕРИИ ОТБОРА (Убийцы мусора):
-                    
-                    // 1. Ликвидность кривой должна быть в здоровом диапазоне (от 1 до 25 SOL), 
-                    // чтобы исключить пустые тесты и уже пропампепленные монеты.
+                    // Фильтры отбора качества
                     const isHealthyLiq = solInCurve >= 1.0 && solInCurve <= 25.0;
-
-                    // 2. Защита от безымянного мусора (у монеты должно быть нормальное имя и тикер)
                     const hasValidName = name.length > 1 && symbol.length > 1 && !name.toLowerCase().includes('test');
-
-                    // 3. Дополнительный фильтр качества: приветствуем наличие соцсетей (но не отсекаем наглухо, если их нет, но ликвидность хорошая)
-                    // Для теста сделаем так: если ликвидность отличная, пропускаем. Если есть соцсети — бонус к приоритету.
                     
                     if (isHealthyLiq && hasValidName) {
                         const now = new Date();
