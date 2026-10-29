@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Chain Moonshot Sniper</title>
+    <title>Instant Pump.fun & BSC Sniper</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -12,8 +12,7 @@
             --green: #22c55e;
             --red: #ef4444;
             --primary: #6366f1;
-            --solana: #14f195;
-            --bsc: #f3ba2f;
+            --pump: #10b981;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -54,17 +53,15 @@
             padding: 16px;
             margin-bottom: 12px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
-            border-left: 4px solid var(--green);
+            border-left: 4px solid var(--pump);
         }
-        .card.sol { border-left-color: var(--solana); }
-        .card.bsc { border-left-color: var(--bsc); }
         .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; color: #94a3b8; }
         .row span { color: var(--text); font-weight: 500; }
         .details-btn {
             display: block;
             width: 100%;
             text-align: center;
-            background: var(--green);
+            background: var(--pump);
             color: white;
             text-decoration: none;
             padding: 12px;
@@ -73,7 +70,7 @@
             margin-top: 12px;
             box-sizing: border-box;
         }
-        .status { text-align: center; font-size: 0.8rem; color: #64748b; margin-bottom: 12px; }
+        .status { text-align: center; font-size: 0.8rem; color: #10b981; margin-bottom: 12px; font-weight: bold; }
         .time-badge { font-size: 0.75rem; background: #334155; padding: 2px 6px; border-radius: 4px; color: #cbd5e1; }
     </style>
 </head>
@@ -82,13 +79,13 @@
 <div class="container">
     <header>
         <div>
-            <h1>🚀 Moonshot Radar</h1>
-            <div style="font-size: 0.75rem; color: #94a3b8;">BSC + Solana | Бюджет: $20</div>
+            <h1>⚡ Realtime Pump Sniper</h1>
+            <div style="font-size: 0.75rem; color: #94a3b8;">Pump.fun (Задержка ~0 сек)</div>
         </div>
         <button class="btn" id="notifBtn" onclick="requestPermission()">🔔 Пуши</button>
     </header>
 
-    <div class="status" id="statusBar">🛡️ Сканирование сетей (BSC & Solana)...</div>
+    <div class="status" id="statusBar">🟢 WebSocket подключен к Pump.fun Stream...</div>
 
     <div id="feed"></div>
 </div>
@@ -112,9 +109,9 @@
         }
     }
 
-    // Загрузка истории из localStorage при открытии страницы
     document.addEventListener("DOMContentLoaded", () => {
         loadSignalsFromStorage();
+        connectPumpPortal();
     });
 
     function getSavedSignals() {
@@ -124,10 +121,9 @@
 
     function saveSignalToStorage(data) {
         let signals = getSavedSignals();
-        // Проверяем на дубликаты
         if (!signals.some(s => s.address === data.address)) {
-            signals.unshift(data); // Добавляем в начало
-            if (signals.length > 15) signals.pop(); // Храним максимум 15 штук
+            signals.unshift(data);
+            if (signals.length > 20) signals.pop();
             localStorage.setItem('moon_signals', JSON.stringify(signals));
         }
     }
@@ -136,10 +132,7 @@
         const feed = document.getElementById('feed');
         feed.innerHTML = '';
         const signals = getSavedSignals();
-        
-        signals.forEach(data => {
-            renderCard(data, false);
-        });
+        signals.forEach(data => renderCard(data, false));
     }
 
     function renderCard(data, isNew = false) {
@@ -148,76 +141,67 @@
 
         const card = document.createElement('div');
         card.id = `token-${data.address}`;
-        card.className = `card ${data.chain === 'solana' ? 'sol' : 'bsc'}`;
-        
-        const chainName = data.chain === 'solana' ? '⚡ Solana' : '🟡 BSC';
+        card.className = 'card';
         
         card.innerHTML = `
             <div class="row">
                 <strong style="font-size: 1rem;">${data.name} ($${data.symbol})</strong>
                 <span class="time-badge">${data.time}</span>
             </div>
-            <div class="row"><span>Сеть:</span> <span style="color: ${data.chain === 'solana' ? '#14f195' : '#f3ba2f'};">${chainName}</span></div>
-            <div class="row"><span>Ликвидность:</span> <span style="color:#38bdf8;">$${data.liquidity.toLocaleString()}</span></div>
-            <div class="row"><span>Лимит на сделку:</span> <strong style="color:var(--green);">$5.00 (25%)</strong></div>
-            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&chain=${data.chain}" class="details-btn">⚡ Открыть терминал покупки</a>
+            <div class="row"><span>Источник:</span> <span style="color: #10b981;">⚡ Pump.fun (Realtime)</span></div>
+            <div class="row"><span>Старт. ликвидность:</span> <span style="color:#38bdf8;">~$${data.liquidity}</span></div>
+            <div class="row"><span>Лимит ($20 депозит):</span> <strong style="color:var(--green);">$5.00 (25%)</strong></div>
+            <a href="signal.html?token=${data.address}&name=${encodeURIComponent(data.name)}&chain=solana" class="details-btn">⚡ Влететь в сделку</a>
         `;
         
         feed.prepend(card);
 
         if (isNew) {
-            sendPush(`🚀 РАКЕТА [${chainName}]: ${data.name}`, `Ликвидность: $${data.liquidity.toLocaleString()} | Время: ${data.time}`);
+            sendPush(`⚡ МГНОВЕННЫЙ ЗАПУСК: ${data.name}`, `Pump.fun | Время: ${data.time} | Нажми для входа!`);
         }
     }
 
-    // Сканер сетей BSC и Solana
-    async function scanForMoonshots() {
-        try {
-            const response = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
-            const data = await response.json();
-            
-            if (Array.isArray(data)) {
-                // Фильтруем сети bsc и solana
-                const targets = data.filter(t => (t.chainId === 'bsc' || t.chainId === 'solana') && t.tokenAddress);
+    // Подключение к прямому WebSocket PumpPortal (без задержек DexScreener)
+    function connectPumpPortal() {
+        const ws = new WebSocket('wss://pumpportal.fun/api/data');
+
+        ws.onopen = () => {
+            console.log('Подключено к PumpPortal WebSocket');
+            // Подписываемся на новые создаваемые токены на Pump.fun
+            ws.send(JSON.stringify({ method: "subscribeNewToken" }));
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
                 
-                for (let t of targets.slice(0, 5)) {
-                    const pairRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${t.tokenAddress}`);
-                    const pairData = await pairRes.json();
+                // Проверяем, что это новый деплой токена
+                if (data && data.mint) {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                    if (pairData && pairData.pairs && pairData.pairs.length > 0) {
-                        const pair = pairData.pairs[0];
-                        const liquidity = pair.liquidity?.usd || 0;
-                        const volume = pair.volume?.h24 || 0;
+                    const tokenData = {
+                        name: data.name || 'PumpToken',
+                        symbol: data.symbol || 'PUMP',
+                        address: data.mint, // Мгновенный адрес Solana
+                        liquidity: Math.floor(data.vSolInBondingCurve * 150) || 3000, // Примерная оценка в USD
+                        chain: 'solana',
+                        time: timeString
+                    };
 
-                        // Фильтр ликвидности и объема
-                        if (liquidity >= 1000 && liquidity <= 30000 && volume >= 500) {
-                            const now = new Date();
-                            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-                            const tokenData = {
-                                name: pair.baseToken.name || 'Gem',
-                                symbol: pair.baseToken.symbol || 'GEM',
-                                address: pair.baseToken.address,
-                                liquidity: Math.floor(liquidity),
-                                chain: pair.chainId,
-                                time: timeString
-                            };
-
-                            // Сохраняем в память и выводим
-                            saveSignalToStorage(tokenData);
-                            renderCard(tokenData, true);
-                            break; 
-                        }
-                    }
+                    saveSignalToStorage(tokenData);
+                    renderCard(tokenData, true);
                 }
+            } catch (e) {
+                console.error('Ошибка обработки сообщения WebSocket:', e);
             }
-        } catch (e) {
-            console.error('Ошибка сканирования:', e);
-        }
-    }
+        };
 
-    scanForMoonshots();
-    setInterval(scanForMoonshots, 25000);
+        ws.onclose = () => {
+            document.getElementById('statusBar').innerText = '🔴 Переподключение к стриму...';
+            setTimeout(connectPumpPortal, 3000); // Автопереподключение при обрыве
+        };
+    }
 </script>
 
 </body>
